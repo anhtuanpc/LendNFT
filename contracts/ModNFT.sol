@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721Enumer
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract NFT is Initializable, OwnableUpgradeable, ERC721EnumerableUpgradeable, AccessControlUpgradeable {
+contract ModNFT is Initializable, OwnableUpgradeable, ERC721EnumerableUpgradeable, AccessControlUpgradeable {
     // variables and mappings
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant ROOT_OWNER = keccak256("ROOT_OWNER");
@@ -64,36 +64,36 @@ contract NFT is Initializable, OwnableUpgradeable, ERC721EnumerableUpgradeable, 
         return super.supportsInterface(interfaceId);
     }
 
-    // internal functions
-        function _transfer(
-        address from,
-        address to,
-        uint256 tokenId
-    ) internal override {
-        require(ERC721Upgradeable.ownerOf(tokenId) == from, "ERC721: transfer from incorrect owner");
-        require(to != address(0), "ERC721: transfer to the zero address");
+    // // internal functions
+    //     function _transfer(
+    //     address from,
+    //     address to,
+    //     uint256 tokenId
+    // ) internal override {
+    //     require(ERC721Upgradeable.ownerOf(tokenId) == from, "ERC721: transfer from incorrect owner");
+    //     require(to != address(0), "ERC721: transfer to the zero address");
 
-        _beforeTokenTransfer(from, to, tokenId, 1);
+    //     _beforeTokenTransfer(from, to, tokenId, 1);
 
-        // Check that tokenId was not transferred by `_beforeTokenTransfer` hook
-        require(ERC721Upgradeable.ownerOf(tokenId) == from, "ERC721: transfer from incorrect owner");
+    //     // Check that tokenId was not transferred by `_beforeTokenTransfer` hook
+    //     require(ERC721Upgradeable.ownerOf(tokenId) == from, "ERC721: transfer from incorrect owner");
 
-        // Clear approvals from the previous owner
-        delete _tokenApprovals[tokenId];
+    //     // Clear approvals from the previous owner
+    //     delete _tokenApprovals[tokenId];
 
-        unchecked {
-            // `_balances[from]` cannot overflow for the same reason as described in `_burn`:
-            // `from`'s balance is the number of token held, which is at least one before the current
-            // transfer.
-            // `_balances[to]` could overflow in the conditions described in `_mint`. That would require
-            // all 2**256 token ids to be minted, which in practice is impossible.
-            _balances[from] -= 1;
-            _balances[to] += 1;
-        }
-        _owners[tokenId] = to;
+    //     unchecked {
+    //         // `_balances[from]` cannot overflow for the same reason as described in `_burn`:
+    //         // `from`'s balance is the number of token held, which is at least one before the current
+    //         // transfer.
+    //         // `_balances[to]` could overflow in the conditions described in `_mint`. That would require
+    //         // all 2**256 token ids to be minted, which in practice is impossible.
+    //         _balances[from] -= 1;
+    //         _balances[to] += 1;
+    //     }
+    //     _owners[tokenId] = to;
 
-        emit Transfer(from, to, tokenId);
+    //     emit Transfer(from, to, tokenId);
 
-        _afterTokenTransfer(from, to, tokenId, 1);
-    }
+    //     _afterTokenTransfer(from, to, tokenId, 1);
+    // }
 }
