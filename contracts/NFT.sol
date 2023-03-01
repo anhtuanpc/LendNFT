@@ -8,7 +8,7 @@ contract NFT is ERC721Enumerable, Ownable {
     // structs and events
     string public baseTokenURI;
 
-    constructor(string memory _name, string memory _symbol) ERC721(_name, _symbol) {}
+    constructor() ERC721("TEST", "TEST") {}
 
     function _baseURI() internal view virtual override returns (string memory) {
         return baseTokenURI;
