@@ -4,9 +4,10 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract RLFMarketplace is Ownable, ReentrancyGuard {
+contract RLFMarketplace is Ownable, ReentrancyGuard, IERC721Receiver {
     struct ListNFT {
         address nft;
         uint256 tokenId;
@@ -482,5 +483,14 @@ contract RLFMarketplace is Ownable, ReentrancyGuard {
         uint256 _tokenId
     ) public view returns (ListNFT memory) {
         return listNfts[_nft][_tokenId];
+    }
+
+    function onERC721Received(
+        address operator,
+        address from,
+        uint256 tokenId,
+        bytes calldata data
+    ) external pure override returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 }
