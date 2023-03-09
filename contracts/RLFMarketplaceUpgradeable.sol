@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract RLFMarketplace is Ownable, ReentrancyGuard {
+contract RLFMarketplace is
+    Initializable,
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable
+{
     struct ListNFT {
         address nft;
         uint256 tokenId;
@@ -171,13 +176,18 @@ contract RLFMarketplace is Ownable, ReentrancyGuard {
         _;
     }
 
+    // upgradeable variable
+
+    // initialize
+    function initialize() public initializer {}
+
     function putNftOnMarketplace(
         address _nft,
         uint256 _tokenId,
         address _payToken,
         uint256 _price
     ) external {
-        IERC721 nft = IERC721(_nft);
+        IERC721Upgradeable nft = IERC721Upgradeable(_nft);
         require(nft.ownerOf(_tokenId) == msg.sender, "not nft owner");
         nft.transferFrom(msg.sender, address(this), _tokenId);
 
@@ -199,7 +209,11 @@ contract RLFMarketplace is Ownable, ReentrancyGuard {
     ) external isListedNFT(_nft, _tokenId) {
         ListNFT memory listedNFT = listNfts[_nft][_tokenId];
         require(listedNFT.seller == msg.sender, "not listed owner");
-        IERC721(_nft).transferFrom(address(this), msg.sender, _tokenId);
+        IERC721Upgradeable(_nft).transferFrom(
+            address(this),
+            msg.sender,
+            _tokenId
+        );
         delete listNfts[_nft][_tokenId];
     }
 
@@ -222,14 +236,14 @@ contract RLFMarketplace is Ownable, ReentrancyGuard {
         uint256 totalPrice = _price;
 
         // Transfer to nft owner
-        IERC20(listedNft.payToken).transferFrom(
+        IERC20Upgradeable(listedNft.payToken).transferFrom(
             msg.sender,
             listedNft.seller,
             totalPrice
         );
 
         // Transfer NFT to buyer
-        IERC721(listedNft.nft).safeTransferFrom(
+        IERC721Upgradeable(listedNft.nft).safeTransferFrom(
             address(this),
             msg.sender,
             listedNft.tokenId
@@ -254,7 +268,7 @@ contract RLFMarketplace is Ownable, ReentrancyGuard {
         require(_offerPrice > 0, "price can not 0");
 
         ListNFT memory nft = listNfts[_nft][_tokenId];
-        IERC20(nft.payToken).transferFrom(
+        IERC20Upgradeable(nft.payToken).transferFrom(
             msg.sender,
             address(this),
             _offerPrice
@@ -286,7 +300,10 @@ contract RLFMarketplace is Ownable, ReentrancyGuard {
         require(offer.offerer == msg.sender, "not offerer");
         require(!offer.accepted, "offer already accepted");
         delete offerNfts[_nft][_tokenId][msg.sender];
-        IERC20(offer.payToken).transfer(offer.offerer, offer.offerPrice);
+        IERC20Upgradeable(offer.payToken).transfer(
+            offer.offerer,
+            offer.offerPrice
+        );
         emit CanceledOfferredNFT(
             offer.nft,
             offer.tokenId,
@@ -321,13 +338,13 @@ contract RLFMarketplace is Ownable, ReentrancyGuard {
         uint256 offerPrice = offer.offerPrice;
         uint256 totalPrice = offerPrice;
 
-        IERC20 payToken = IERC20(offer.payToken);
+        IERC20Upgradeable payToken = IERC20Upgradeable(offer.payToken);
 
         // Transfer to seller
         payToken.transfer(list.seller, totalPrice);
 
         // Transfer NFT to offerer
-        IERC721(list.nft).safeTransferFrom(
+        IERC721Upgradeable(list.nft).safeTransferFrom(
             address(this),
             offer.offerer,
             list.tokenId
@@ -352,7 +369,7 @@ contract RLFMarketplace is Ownable, ReentrancyGuard {
         uint256 _startTime,
         uint256 _endTime
     ) external isNotAuction(_nft, _tokenId) {
-        IERC721 nft = IERC721(_nft);
+        IERC721Upgradeable nft = IERC721Upgradeable(_nft);
         require(nft.ownerOf(_tokenId) == msg.sender, "not nft owner");
         require(_endTime > _startTime, "invalid end time");
 
@@ -394,7 +411,7 @@ contract RLFMarketplace is Ownable, ReentrancyGuard {
         require(block.timestamp < auction.startTime, "auction already started");
         require(auction.lastBidder == address(0), "already have bidder");
 
-        IERC721 nft = IERC721(_nft);
+        IERC721Upgradeable nft = IERC721Upgradeable(_nft);
         nft.transferFrom(address(this), msg.sender, _tokenId);
         delete auctionNfts[_nft][_tokenId];
     }
@@ -420,7 +437,7 @@ contract RLFMarketplace is Ownable, ReentrancyGuard {
         );
 
         AuctionNFT storage auction = auctionNfts[_nft][_tokenId];
-        IERC20 payToken = IERC20(auction.payToken);
+        IERC20Upgradeable payToken = IERC20Upgradeable(auction.payToken);
         payToken.transferFrom(msg.sender, address(this), _bidPrice);
 
         if (auction.lastBidder != address(0)) {
@@ -452,8 +469,8 @@ contract RLFMarketplace is Ownable, ReentrancyGuard {
         );
 
         AuctionNFT storage auction = auctionNfts[_nft][_tokenId];
-        IERC20 payToken = IERC20(auction.payToken);
-        IERC721 nft = IERC721(auction.nft);
+        IERC20Upgradeable payToken = IERC20Upgradeable(auction.payToken);
+        IERC721Upgradeable nft = IERC721Upgradeable(auction.nft);
 
         auction.success = true;
         auction.winner = auction.creator;
