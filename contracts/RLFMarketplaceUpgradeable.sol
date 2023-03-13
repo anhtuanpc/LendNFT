@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradea
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract RLFMarketplace is
+contract RLFMarketplaceUpgradeable is
     Initializable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
