@@ -213,6 +213,11 @@ contract RLFAuction is Ownable, ReentrancyGuard, IERC721Receiver {
         );
     }
 
+    // for test only
+    function getTime() public view returns(uint256) {
+        return block.timestamp;
+    }
+
     function onERC721Received(
         address operator,
         address from,
