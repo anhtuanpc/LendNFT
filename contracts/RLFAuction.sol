@@ -14,6 +14,7 @@ contract RLFAuction is Ownable, ReentrancyGuard, IERC721Receiver {
         address creator;
         address payToken;
         uint256 initialPrice;
+        uint256 ceilingPrice;
         uint256 minBid;
         uint256 startTime;
         uint256 endTime;
@@ -44,6 +45,7 @@ contract RLFAuction is Ownable, ReentrancyGuard, IERC721Receiver {
         uint256 endTime,
         address indexed creator
     );
+
     event PlacedBid(
         address indexed nft,
         uint256 indexed tokenId,
@@ -61,11 +63,15 @@ contract RLFAuction is Ownable, ReentrancyGuard, IERC721Receiver {
         address caller
     );
 
+    // variables for fees here...
+    uint256 public royalFee = 500;
+    uint256 constant divisor = 10000;
+
     modifier isAuction(address _nft, uint256 _tokenId) {
         AuctionNFT memory auction = auctionNfts[_nft][_tokenId];
         require(
             auction.nft != address(0) && !auction.success,
-            "auction already created"
+            "auction not created yet"
         );
         _;
     }
@@ -79,11 +85,18 @@ contract RLFAuction is Ownable, ReentrancyGuard, IERC721Receiver {
         _;
     }
 
+    // funciton to update royalFee... 
+    function setRoyalFee(uint256 _royalFee) public onlyOwner {
+        require(_royalFee < divisor, "invalid royal fee");
+        royalFee = _royalFee;
+    }
+
     function createAuction(
         address _nft,
         uint256 _tokenId,
         address _payToken,
         uint256 _price,
+        uint256 _ceilingPrice,
         uint256 _minBid,
         uint256 _startTime,
         uint256 _endTime
@@ -91,6 +104,8 @@ contract RLFAuction is Ownable, ReentrancyGuard, IERC721Receiver {
         IERC721 nft = IERC721(_nft);
         require(nft.ownerOf(_tokenId) == msg.sender, "not nft owner");
         require(_endTime > _startTime, "invalid end time");
+        require(_ceilingPrice >= _price, "invalid ceiling price");
+        require(_price >= _minBid, "invalid price");
 
         nft.transferFrom(msg.sender, address(this), _tokenId);
 
@@ -100,11 +115,12 @@ contract RLFAuction is Ownable, ReentrancyGuard, IERC721Receiver {
             creator: msg.sender,
             payToken: _payToken,
             initialPrice: _price,
+            ceilingPrice: _ceilingPrice,
             minBid: _minBid,
             startTime: _startTime,
             endTime: _endTime,
             lastBidder: address(0),
-            heighestBid: _price,
+            heighestBid: _price - _minBid,
             winner: address(0),
             success: false
         });
@@ -172,6 +188,10 @@ contract RLFAuction is Ownable, ReentrancyGuard, IERC721Receiver {
         auction.heighestBid = _bidPrice;
 
         emit PlacedBid(_nft, _tokenId, auction.payToken, _bidPrice, msg.sender);
+
+        if(_bidPrice >= auction.ceilingPrice) {
+            _processEndAuction(_nft, _tokenId);
+        }
     }
 
     function completeBid(address _nft, uint256 _tokenId) external nonReentrant {
@@ -183,10 +203,23 @@ contract RLFAuction is Ownable, ReentrancyGuard, IERC721Receiver {
             "not creator, winner, or owner"
         );
         require(
-            block.timestamp > auctionNfts[_nft][_tokenId].endTime,
-            "auction not ended"
+            block.timestamp > auctionNfts[_nft][_tokenId].endTime || msg.sender == auctionNfts[_nft][_tokenId].creator,
+            "auction not ended or require owner for soon complete"
         );
 
+        _processEndAuction(_nft, _tokenId);
+    }
+
+    function getRoyalFeeAmount(uint256  _tokenAmount) public view returns(uint256) {
+        return _tokenAmount * royalFee  / divisor;
+    }
+
+    // for test only
+    function getTime() public view returns(uint256) {
+        return block.timestamp;
+    }
+
+    function _processEndAuction(address _nft, uint256 _tokenId) internal {
         AuctionNFT storage auction = auctionNfts[_nft][_tokenId];
         IERC20 payToken = IERC20(auction.payToken);
         IERC721 nft = IERC721(auction.nft);
@@ -196,9 +229,11 @@ contract RLFAuction is Ownable, ReentrancyGuard, IERC721Receiver {
 
         uint256 heighestBid = auction.heighestBid;
         uint256 totalPrice = heighestBid;
+        uint256 royalFeeAmount = getRoyalFeeAmount(totalPrice);
 
-        // Transfer to auction creator
-        payToken.transfer(auction.creator, totalPrice);
+        // Transfer to auction creator, the royalFee to admin wallet
+        payToken.transfer(auction.creator, totalPrice - royalFeeAmount);
+        payToken.transfer(owner(), royalFeeAmount);
 
         // Transfer NFT to the winner
         nft.transferFrom(address(this), auction.lastBidder, auction.tokenId);
@@ -211,11 +246,6 @@ contract RLFAuction is Ownable, ReentrancyGuard, IERC721Receiver {
             auction.heighestBid,
             msg.sender
         );
-    }
-
-    // for test only
-    function getTime() public view returns(uint256) {
-        return block.timestamp;
     }
 
     function onERC721Received(

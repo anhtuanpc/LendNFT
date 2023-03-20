@@ -5,12 +5,14 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract RealToken is ERC20, Ownable {
+    uint256 public constant TOTAL_SUPPLY = 50000000000 ether;
     // structs and events
     constructor() ERC20("Real Token", "REAL") {
         _mint(_msgSender(), 20000 ether);
     }
 
     function mint(address _receiver, uint256 _amount) public onlyOwner {
+        require(totalSupply() + _amount <= TOTAL_SUPPLY, "[RLF]: Exceed maximum token amount");
         _mint(_receiver, _amount);
     }
 
